@@ -1,0 +1,30 @@
+name: Create Release on Push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Grant permission to create releases/tags
+    steps:
+      # This new step manually calculates the short SHA
+      - name: Get short SHA
+        id: get_sha
+        run: echo "sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      # This step now uses the output from the step above
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: commit-${{ steps.get_sha.outputs.sha }}
+          release_name: Release ${{ steps.get_sha.outputs.sha }}
+          body: |
+            Automatic release created from commit ${{ github.sha }} on the main branch.
+          draft: false
+          prerelease: true

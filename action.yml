@@ -78,12 +78,15 @@ runs:
       run: |
         $downloadUrl = "${{ steps.fetch-podman-url.outputs.download_url }}"
         $podmanVersion = "${{ steps.fetch-podman-url.outputs.version }}"
+
+        $versionNumber = $podmanVersion -replace '^v'
+        $fileName = "podman-$versionNumber-setup.exe"
+
         echo "Installing Podman version $podmanVersion..."
-        echo "Downloading from $downloadUrl"
-        curl --output podman-setup.exe -L $downloadUrl
-        # Start the installer and wait for it to complete
-        Start-Process -FilePath .\podman-setup.exe -ArgumentList "/install", "/passive", "/norestart", "/log podman-logs.txt" -Wait
-        # Check the logs for debugging purposes
+        echo "Downloading from $downloadUrl file $fileName"
+        curl --output $fileName -L $downloadUrl
+
+        Start-Process -FilePath ".\$fileName" -ArgumentList "/install", "/passive", "/norestart", "/log podman-logs.txt" -Wait
         Get-Content podman-logs.txt
 
     - name: Initialize Podman Machine on Windows
@@ -95,4 +98,3 @@ runs:
         podman --version
         echo "Initializing Podman machine..."
         podman machine init --now
-        

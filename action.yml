@@ -67,7 +67,7 @@ runs:
     - name: Fetch Podman Download URL for Windows
       if: runner.os == 'Windows'
       id: fetch-podman-url
-      uses: e2e/.github/actions/fetch-latest-podman-version@000fae69920aef1c95b5b3d09ebcd0508c1ad199
+      uses: podman-desktop/e2e/.github/actions/fetch-latest-podman-version@000fae69920aef1c95b5b3d09ebcd0508c1ad199
       with:
         version_input: ${{ inputs.podman-version-input }}
         file_type: 'setup.exe'

@@ -5,13 +5,13 @@ It's designed to be a simple, one-stop solution for setting up Podman in your CI
 
 ## Features
 
-    Cross-Platform: Works for both ubuntu-latest and windows-latest runners.
+Cross-Platform: Works for both ubuntu-latest and windows-latest runners.
 
-    Smart Windows Installation: Automatically installs the latest Podman version by default, or lets you specify a specific version (e.g., 5.6.2).
+Smart Windows Installation: Automatically installs the latest Podman version by default, or lets you specify a specific version (e.g., 5.6.2).
 
-    Windows Ready-to-Use: On Windows, the action automatically runs podman machine init --now after installation, so your machine is ready for use in subsequent steps.
+Windows Ready-to-Use: On Windows, the action automatically runs podman machine init --now after installation, so your machine is ready for use in subsequent steps.
 
-    Modern Linux Support: On Ubuntu, it installs Podman v5.x and its dependencies (like CRIU) from the Kubic repository.
+Modern Linux Support: On Ubuntu, it installs Podman v5.x and its dependencies (like CRIU) from the Kubic repository.
 
 ### Usage
 
@@ -60,12 +60,12 @@ jobs:
 
 Inputs
 
-    podman-version-input: (Windows only) The Podman version to install.
+podman-version-input: (Windows only) The Podman version to install.
 
-        Default: latest
+    Default: latest
 
-        Options: latest or a specific version string (e.g., '5.6.2').
+    Options: latest or a specific version string (e.g., '5.6.2').
 
-    ubuntu-version: (Linux only) The Ubuntu version codename to use for the Kubic repository URL.
+ubuntu-version: (Linux only) The Ubuntu version codename to use for the Kubic repository URL.
 
-        Default: 23.10
+    Default: 23.10

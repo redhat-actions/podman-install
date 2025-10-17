@@ -16,19 +16,23 @@
 #  * SPDX-License-Identifier: Apache-2.0
 #  ***********************************************************************/
 
-name: "Install Podman 5.x"
-description: "Installs/updates Podman to v5 from the Kubic repository on Ubuntu."
+name: "Install Podman"
+description: "Installs Podman on Linux, or a specific/latest version on Windows."
 
 inputs:
   ubuntu-version:
     description: "The Ubuntu version codename for the Kubic repository."
     required: false
     default: "23.10"
+  podman-version-input:
+    description: "Podman version for Windows. Use 'latest' or a specific version (e.g. '5.6.2')."
+    required: false
+    default: "latest"
 
 runs:
   using: "composite"
   steps:
-    - name: Update podman to 5.x
+    - name: Update podman to 5.x on Linux
       if: runner.os == 'Linux'
       shell: bash
       run: |
@@ -60,15 +64,29 @@ runs:
         echo "INFO: Podman installation complete."
         podman version
 
+    - name: Fetch Podman Download URL for Windows
+      if: runner.os == 'Windows'
+      id: fetch-podman-url
+      uses: redhat-actions/podman-install/.github/actions/fetch-latest-podman-version-windows@e4b1fa48c45110617d0ae3a995b81428f4234d96
+      with:
+        version_input: ${{ inputs.podman-version-input }}
+        file_type: 'setup.exe'
+
     - name: Install Podman on Windows
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        echo "Installing Podman..."
-        curl --output podman-setup.exe -L https://github.com/containers/podman/releases/download/v5.3.2/podman-5.3.2-setup.exe
-        # Start the installer and wait for it to complete
-        Start-Process -FilePath .\podman-setup.exe -ArgumentList "/install", "/passive", "/norestart", "/log podman-logs.txt" -Wait
-        # Check the logs for debugging purposes
+        $downloadUrl = "${{ steps.fetch-podman-url.outputs.download_url }}"
+        $podmanVersion = "${{ steps.fetch-podman-url.outputs.version }}"
+
+        $versionNumber = $podmanVersion -replace '^v'
+        $fileName = "podman-$versionNumber-setup.exe"
+
+        echo "Installing Podman version $podmanVersion..."
+        echo "Downloading from $downloadUrl file $fileName"
+        curl --output $fileName -L $downloadUrl
+
+        Start-Process -FilePath ".\$fileName" -ArgumentList "/install", "/passive", "/norestart", "/log podman-logs.txt" -Wait
         Get-Content podman-logs.txt
 
     - name: Initialize Podman Machine on Windows

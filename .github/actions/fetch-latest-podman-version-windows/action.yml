@@ -1,0 +1,164 @@
+# Copyright (C) 2025 Red Hat, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: 'Fetch Latest Podman Version for Windows'
+description: 'Fetches the latest Podman release version and constructs Windows download URLs'
+
+inputs:
+  version_input:
+    description: 'Version input - use "latest" to auto-fetch, or provide specific version'
+    required: true
+    default: 'latest'
+  architecture:
+    description: 'Architecture for Windows (amd64, arm64)'
+    required: false
+    default: 'amd64'
+  file_type:
+    description: 'File type for Windows (setup.exe, installer.exe, remote.zip)'
+    required: false
+    default: 'setup.exe'
+
+outputs:
+  version:
+    description: 'The Podman version (e.g., v5.6.1)'
+    value: ${{ steps.fetch.outputs.version }}
+  download_url:
+    description: 'The constructed download URL'
+    value: ${{ steps.fetch.outputs.download_url }}
+  is_latest:
+    description: 'Whether the latest version was fetched (true/false)'
+    value: ${{ steps.fetch.outputs.is_latest }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Fetch Podman version and construct URL
+      id: fetch
+      shell: bash
+      run: |
+        INPUT_VERSION="${{ inputs.version_input }}"
+        ARCHITECTURE="${{ inputs.architecture }}"
+        FILE_TYPE="${{ inputs.file_type }}"
+        
+        echo "Input version: $INPUT_VERSION"
+        echo "Architecture: $ARCHITECTURE"
+        echo "File type: $FILE_TYPE"
+        
+        # Input validation
+        if [ -z "$INPUT_VERSION" ]; then
+          echo "Error: Version input cannot be empty"
+          exit 1
+        fi
+        
+        if [ "$INPUT_VERSION" = "latest" ]; then
+          echo "Fetching latest Podman release..."
+          
+          # Check if jq is available
+          if ! command -v jq &> /dev/null; then
+            echo "Error: jq is required but not installed"
+            exit 1
+          fi
+          
+          # Fetch latest release with error handling
+          API_RESPONSE=$(curl -s https://api.github.com/repos/containers/podman/releases/latest)
+          if [ $? -ne 0 ]; then
+            echo "Error: Failed to fetch data from GitHub API"
+            exit 1
+          fi
+          
+          # Check for API errors (rate limiting, etc.)
+          if echo "$API_RESPONSE" | jq -e '.message' >/dev/null 2>&1; then
+            ERROR_MESSAGE=$(echo "$API_RESPONSE" | jq -r '.message')
+            echo "Error: GitHub API returned an error: $ERROR_MESSAGE"
+            exit 1
+          fi
+          
+          # Parse version with validation
+          LATEST_VERSION=$(echo "$API_RESPONSE" | jq -r '.tag_name')
+          if [ "$LATEST_VERSION" = "null" ] || [ -z "$LATEST_VERSION" ]; then
+            echo "Error: Could not parse version from GitHub API response"
+            exit 1
+          fi
+          
+          echo "Latest Podman version: $LATEST_VERSION"
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "is_latest=true" >> $GITHUB_OUTPUT
+          VERSION_NUMBER=${LATEST_VERSION#v}
+        elif [[ "$INPUT_VERSION" =~ ^https?:// ]]; then
+          # Full URL provided, use as-is
+          echo "Full URL provided: $INPUT_VERSION"
+          echo "download_url=$INPUT_VERSION" >> $GITHUB_OUTPUT
+          echo "is_latest=false" >> $GITHUB_OUTPUT
+          # Try to extract version from URL for version output
+          if [[ "$INPUT_VERSION" =~ v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            echo "version=v${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          else
+            echo "version=custom" >> $GITHUB_OUTPUT
+          fi
+          exit 0
+        else
+          # Specific version provided
+          echo "Specific version provided: $INPUT_VERSION"
+          
+          # Validate version format (should be semver-like: v5.6.1, 5.6.1, v5.6.1-rc1, etc.)
+          if [[ ! "$INPUT_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([.-](rc|alpha|beta)[0-9]*)?$ ]]; then
+            echo "Error: Invalid version format: $INPUT_VERSION"
+            echo "Expected formats: v5.6.1, 5.6.1, v5.6.1-rc1, 5.6.1-rc1, etc."
+            exit 1
+          fi
+          
+          if [[ "$INPUT_VERSION" =~ ^v ]]; then
+            LATEST_VERSION="$INPUT_VERSION"
+          else
+            LATEST_VERSION="v$INPUT_VERSION"
+          fi
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "is_latest=false" >> $GITHUB_OUTPUT
+          VERSION_NUMBER=${LATEST_VERSION#v}
+        fi
+        
+        # Construct Windows download URL
+        case "$FILE_TYPE" in
+          "setup.exe")
+            DOWNLOAD_URL="https://github.com/containers/podman/releases/download/${LATEST_VERSION}/podman-${VERSION_NUMBER}-setup.exe"
+            ;;
+          "installer.exe")
+            DOWNLOAD_URL="https://github.com/containers/podman/releases/download/${LATEST_VERSION}/podman-installer-windows-${ARCHITECTURE}.exe"
+            ;;
+          "remote.zip")
+            DOWNLOAD_URL="https://github.com/containers/podman/releases/download/${LATEST_VERSION}/podman-remote-release-windows_${ARCHITECTURE}.zip"
+            ;;
+          *)
+            echo "Error: Unsupported Windows file type: $FILE_TYPE"
+            echo "Supported types: setup.exe, installer.exe, remote.zip"
+            exit 1
+            ;;
+        esac
+        
+        echo "Download URL: $DOWNLOAD_URL"
+        
+        # Validate that the download URL actually exists
+        echo "Validating download URL..."
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -I "$DOWNLOAD_URL")
+        if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
+          echo "Error: Download file not found (HTTP $HTTP_CODE)"
+          echo "URL: $DOWNLOAD_URL"
+          echo "This may indicate the version doesn't exist or the file type isn't available for this version"
+          exit 1
+        fi
+        
+        echo "Download URL validated successfully"
+        echo "download_url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT

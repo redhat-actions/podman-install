@@ -49,23 +49,11 @@ jobs:
 If you are using an older Ubuntu runner (e.g., ubuntu-22.04), you may need to specify the corresponding ubuntu-version for the Kubic repository.
 YAML
 
-jobs:
-  build-linux:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Install Podman on Ubuntu 22.04
-        uses: redhat-developer/podman-install@main
-        with:
-          ubuntu-version: '22.04'
-
-Inputs
-
-podman-version-input: (Windows only) The Podman version to install.
-
-    Default: latest
-
-    Options: latest or a specific version string (e.g., '5.6.2').
-
-ubuntu-version: (Linux only) The Ubuntu version codename to use for the Kubic repository URL.
-
-    Default: 23.10
+    jobs:
+        build-linux:
+            runs-on: ubuntu-22.04
+            steps:
+            - name: Install Podman on Ubuntu 22.04
+            uses: redhat-developer/podman-install@main
+            with:
+                ubuntu-version: '22.04'

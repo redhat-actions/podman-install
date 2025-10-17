@@ -14,6 +14,6 @@ On Linux, the action installs Podman v5.x and its key dependencies (like CRIU) f
 
 This action accepts two inputs to customize its behavior:
 
-    podman-version-input: This input is used only on Windows runners. You can set it to 'latest' (which is the default) to automatically install the most recent Podman release, or provide a specific version string (e.g., '5.6.2') to install that exact version.
+podman-version-input: This input is used only on Windows runners. You can set it to 'latest' (which is the default) to automatically install the most recent Podman release, or provide a specific version string (e.g., '5.6.2') to install that exact version.
 
-    ubuntu-version: This input is used only on Linux runners. It specifies the Ubuntu version codename (like '23.10' or '22.04') needed to construct the correct URL for the Kubic repository. The default value is '23.10'.
+ubuntu-version: This input is used only on Linux runners. It specifies the Ubuntu version codename (like '23.10' or '22.04') needed to construct the correct URL for the Kubic repository. The default value is '23.10'.

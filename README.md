@@ -1,59 +1,19 @@
 # podman-install
-This composite action installs Podman on GitHub-hosted runners for both Linux (Ubuntu) and Windows.
 
-It's designed to be a simple, one-stop solution for setting up Podman in your CI workflows.
+This composite action installs Podman on GitHub-hosted runners for both Linux (Ubuntu) and Windows. It's designed to be a simple, one-stop solution for setting up Podman in your CI workflows.
 
 ## Features
 
-Cross-Platform: Works for both ubuntu-latest and windows-latest runners.
+The action is cross-platform, working for both ubuntu-latest and windows-latest runners.
 
-Smart Windows Installation: Automatically installs the latest Podman version by default, or lets you specify a specific version (e.g., 5.6.2).
+On Windows, it features a smart installer that automatically fetches the latest Podman version by default. However, you can also specify a specific version if your CI needs to be pinned to an older release. After installation, the action automatically runs podman machine init --now to ensure the Podman machine is running and ready for use in subsequent steps.
 
-Windows Ready-to-Use: On Windows, the action automatically runs podman machine init --now after installation, so your machine is ready for use in subsequent steps.
+On Linux, the action installs Podman v5.x and its key dependencies (like CRIU) from the openSUSE Kubic repository, ensuring you get a modern version.
 
-Modern Linux Support: On Ubuntu, it installs Podman v5.x and its dependencies (like CRIU) from the Kubic repository.
+### Inputs
 
-### Usage
+This action accepts two inputs to customize its behavior:
 
-Example: Install Latest Podman
+    podman-version-input: This input is used only on Windows runners. You can set it to 'latest' (which is the default) to automatically install the most recent Podman release, or provide a specific version string (e.g., '5.6.2') to install that exact version.
 
-This is the simplest use case. It will install Podman 5.x from Kubic on Linux and the latest available version on Windows.
-YAML
-
-jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    steps:
-      - name: Install Podman
-        uses: redhat-developer/podman-install@main
-
-#### Example: Install a Specific Podman Version on Windows
-
-If your CI needs to be pinned to a specific Podman version on Windows, use the podman-version-input input.
-YAML
-
-jobs:
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Install specific Podman version
-        uses: redhat-developer/podman-install@main
-        with:
-          podman-version-input: '5.6.2'
-
-##### Example: Target a Different Ubuntu Version
-
-If you are using an older Ubuntu runner (e.g., ubuntu-22.04), you may need to specify the corresponding ubuntu-version for the Kubic repository.
-YAML
-
-    jobs:
-        build-linux:
-            runs-on: ubuntu-22.04
-            steps:
-            - name: Install Podman on Ubuntu 22.04
-            uses: redhat-developer/podman-install@main
-            with:
-                ubuntu-version: '22.04'
+    ubuntu-version: This input is used only on Linux runners. It specifies the Ubuntu version codename (like '23.10' or '22.04') needed to construct the correct URL for the Kubic repository. The default value is '23.10'.

@@ -69,7 +69,7 @@ runs:
       id: fetch-podman-url
       uses: redhat-actions/podman-install/.github/actions/fetch-latest-podman-version-windows@e4b1fa48c45110617d0ae3a995b81428f4234d96
       with:
-        version_input: ${{ inputs.podman-version-input }}
+        version_input: ${{ inputs.podman-version-input || 'latest' }}
         file_type: 'setup.exe'
 
     - name: Install Podman on Windows

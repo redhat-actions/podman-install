@@ -30,6 +30,9 @@ inputs:
     description: 'File type for Windows (setup.exe, installer.exe, remote.zip)'
     required: false
     default: 'setup.exe'
+  github_token:
+    description: 'GitHub token to make authenticated API requests'
+    required: false
 
 outputs:
   version:
@@ -52,10 +55,16 @@ runs:
         INPUT_VERSION="${{ inputs.version_input }}"
         ARCHITECTURE="${{ inputs.architecture }}"
         FILE_TYPE="${{ inputs.file_type }}"
+        GITHUB_TOKEN="${{ inputs.github_token }}"
         
         echo "Input version: $INPUT_VERSION"
         echo "Architecture: $ARCHITECTURE"
         echo "File type: $FILE_TYPE"
+        if [ -n "$GITHUB_TOKEN" ]; then
+          echo "GitHub Token: ***"
+        else
+          echo "GitHub Token: not provided"
+        fi
         
         # Input validation
         if [ -z "$INPUT_VERSION" ]; then
@@ -71,12 +80,14 @@ runs:
             echo "Error: jq is required but not installed"
             exit 1
           fi
-          
+
           # Fetch latest release with error handling
-          API_RESPONSE=$(curl -s https://api.github.com/repos/containers/podman/releases/latest)
-          if [ $? -ne 0 ]; then
-            echo "Error: Failed to fetch data from GitHub API"
-            exit 1
+          if [ -n "$GITHUB_TOKEN" ]; then
+            echo "Using GITHUB_TOKEN for authenticated API request."
+            API_RESPONSE=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/containers/podman/releases/latest)
+          else
+            echo "Warning: GITHUB_TOKEN is not set. API requests may be subject to stricter rate limits."
+            API_RESPONSE=$(curl -s https://api.github.com/repos/containers/podman/releases/latest)
           fi
           
           # Check for API errors (rate limiting, etc.)

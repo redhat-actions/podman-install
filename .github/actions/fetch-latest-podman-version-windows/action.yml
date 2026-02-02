@@ -27,7 +27,7 @@ inputs:
     required: false
     default: 'amd64'
   file_type:
-    description: 'File type for Windows (setup.exe, installer.exe, remote.zip)'
+    description: 'File type for Windows (setup.exe, installer.exe, remote.zip, msi)'
     required: false
     default: 'setup.exe'
   github_token:
@@ -152,9 +152,12 @@ runs:
           "remote.zip")
             DOWNLOAD_URL="https://github.com/containers/podman/releases/download/${LATEST_VERSION}/podman-remote-release-windows_${ARCHITECTURE}.zip"
             ;;
+          "msi")
+            DOWNLOAD_URL="https://github.com/containers/podman/releases/download/${LATEST_VERSION}/podman-installer-windows-${ARCHITECTURE}.msi"
+            ;;
           *)
             echo "Error: Unsupported Windows file type: $FILE_TYPE"
-            echo "Supported types: setup.exe, installer.exe, remote.zip"
+            echo "Supported types: setup.exe, installer.exe, remote.zip, msi"
             exit 1
             ;;
         esac

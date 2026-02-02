@@ -29,7 +29,7 @@ inputs:
   file_type:
     description: 'File type for Windows (setup.exe, installer.exe, remote.zip, msi)'
     required: false
-    default: 'setup.exe'
+    default: 'msi'
   github_token:
     description: 'GitHub token to make authenticated API requests'
     required: false

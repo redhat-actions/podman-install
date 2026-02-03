@@ -73,7 +73,6 @@ runs:
       uses: redhat-actions/podman-install/.github/actions/fetch-latest-podman-version-windows@6b757b792b67ec663765a4f2ca36226e12b2f4cd
       with:
         version_input: ${{ inputs.podman-version-input || 'latest' }}
-        file_type: 'setup.exe'
         github_token: ${{ inputs.github-token }}
 
     - name: Install Podman on Windows
@@ -83,22 +82,43 @@ runs:
         $downloadUrl = "${{ steps.fetch-podman-url.outputs.download_url }}"
         $podmanVersion = "${{ steps.fetch-podman-url.outputs.version }}"
 
-        $versionNumber = $podmanVersion -replace '^v'
-        $fileName = "podman-$versionNumber-setup.exe"
+        $uri = [System.Uri]$downloadUrl
+        $fileName = Split-Path -Leaf $uri.AbsolutePath
 
         echo "Installing Podman version $podmanVersion..."
-        echo "Downloading from $downloadUrl file $fileName"
+        echo "Downloading from $downloadUrl to $fileName"
         curl --output $fileName -L $downloadUrl
 
-        Start-Process -FilePath ".\$fileName" -ArgumentList "/install", "/passive", "/norestart", "/log podman-logs.txt" -Wait
-        Get-Content podman-logs.txt
+        if ($fileName -match '\.msi$') {
+          Start-Process msiexec -ArgumentList "/package", "$PWD\$fileName", "/quiet", "/norestart", "/l*v podman-msi.log" -Wait
+        } else {
+          Start-Process -FilePath ".\$fileName" -ArgumentList "/install", "/passive", "/norestart", "/log podman-logs.txt" -Wait
+        }
+        if ($fileName -match '\.msi$' -and (Test-Path podman-msi.log)) {
+          Get-Content podman-msi.log
+        } elseif (Test-Path podman-logs.txt) {
+          Get-Content podman-logs.txt
+        }
 
     - name: Initialize Podman Machine on Windows
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
         echo "Adding Podman to PATH for this session..."
-        $env:PATH += ";C:\Program Files\RedHat\Podman"
+        # New MSI installer locations (user-scope and machine-scope)
+        $userScopePath = "$env:LOCALAPPDATA\Programs\Podman"
+        $machineScopePath = "$env:ProgramFiles\Podman"
+        # Legacy installer location (for backward compatibility)
+        $legacyPath = "C:\Program Files\RedHat\Podman"
+        
+        if (Test-Path $userScopePath) {
+          $env:PATH += ";$userScopePath"
+        } elseif (Test-Path $machineScopePath) {
+          $env:PATH += ";$machineScopePath"
+        } elseif (Test-Path $legacyPath) {
+          $env:PATH += ";$legacyPath"
+        }
+        
         podman --version
         echo "Initializing Podman machine..."
         podman machine init --now

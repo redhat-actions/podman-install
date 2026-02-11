@@ -28,6 +28,10 @@ inputs:
     description: "Podman version for Windows. Use 'latest' or a specific version (e.g. '5.6.2')."
     required: false
     default: "latest"
+  install-scope:
+    description: "Installation scope for Windows MSI installer. Use 'user' for user-scope (no admin required) or 'machine' for machine-scope (requires admin privileges)."
+    required: false
+    default: "user"
   github-token:
     description: "GitHub token to make authenticated API requests and avoid rate limiting."
     required: false
@@ -81,16 +85,25 @@ runs:
       run: |
         $downloadUrl = "${{ steps.fetch-podman-url.outputs.download_url }}"
         $podmanVersion = "${{ steps.fetch-podman-url.outputs.version }}"
+        $installScope = "${{ inputs.install-scope }}"
 
         $uri = [System.Uri]$downloadUrl
         $fileName = Split-Path -Leaf $uri.AbsolutePath
 
         echo "Installing Podman version $podmanVersion..."
+        echo "Installation scope: $installScope"
         echo "Downloading from $downloadUrl to $fileName"
         curl --output $fileName -L $downloadUrl
 
         if ($fileName -match '\.msi$') {
-          Start-Process msiexec -ArgumentList "/package", "$PWD\$fileName", "/quiet", "/norestart", "/l*v podman-msi.log" -Wait
+          $msiArgs = @("/package", "$PWD\$fileName", "/quiet", "/norestart", "/l*v", "podman-msi.log")
+          if ($installScope -eq "machine") {
+            echo "Installing at machine-scope (requires admin privileges)..."
+            $msiArgs += "ALLUSERS=1"
+          } else {
+            echo "Installing at user-scope (no admin required)..."
+          }
+          Start-Process msiexec -ArgumentList $msiArgs -Wait
         } else {
           Start-Process -FilePath ".\$fileName" -ArgumentList "/install", "/passive", "/norestart", "/log podman-logs.txt" -Wait
         }
@@ -104,6 +117,8 @@ runs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
+        $installScope = "${{ inputs.install-scope }}"
+        
         echo "Adding Podman to PATH for this session..."
         # New MSI installer locations (user-scope and machine-scope)
         $userScopePath = "$env:LOCALAPPDATA\Programs\Podman"
@@ -111,7 +126,12 @@ runs:
         # Legacy installer location (for backward compatibility)
         $legacyPath = "$env:ProgramFiles\RedHat\Podman"
         
-        if (Test-Path $userScopePath) {
+        # Check based on install scope first, then fall back to other locations
+        if ($installScope -eq "machine" -and (Test-Path $machineScopePath)) {
+          $env:PATH += ";$machineScopePath"
+        } elseif ($installScope -eq "user" -and (Test-Path $userScopePath)) {
+          $env:PATH += ";$userScopePath"
+        } elseif (Test-Path $userScopePath) {
           $env:PATH += ";$userScopePath"
         } elseif (Test-Path $machineScopePath) {
           $env:PATH += ";$machineScopePath"

@@ -109,7 +109,7 @@ runs:
         $userScopePath = "$env:LOCALAPPDATA\Programs\Podman"
         $machineScopePath = "$env:ProgramFiles\Podman"
         # Legacy installer location (for backward compatibility)
-        $legacyPath = "C:\Program Files\RedHat\Podman"
+        $legacyPath = "$env:ProgramFiles\RedHat\Podman"
         
         if (Test-Path $userScopePath) {
           $env:PATH += ";$userScopePath"
@@ -118,6 +118,9 @@ runs:
         } elseif (Test-Path $legacyPath) {
           $env:PATH += ";$legacyPath"
         }
+        
+        $podmanPath = (Get-Command podman).Path
+        echo "Podman installed at: $podmanPath"
         
         podman --version
         echo "Initializing Podman machine..."

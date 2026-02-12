@@ -6,7 +6,7 @@ This composite action installs Podman on GitHub-hosted runners for both Linux (U
 
 The action is cross-platform, working for both ubuntu-latest and windows-latest runners.
 
-On Windows, it features a smart installer that automatically fetches the latest Podman version by default. However, you can also specify a specific version if your CI needs to be pinned to an older release. After installation, the action automatically runs podman machine init --now to ensure the Podman machine is running and ready for use in subsequent steps.
+On Windows, it uses the official Podman MSI installer, automatically fetching the latest version. You can specify a specific Podman version if your CI needs to be pinned. After installation, the action automatically runs podman machine init --now to ensure the Podman machine is running and ready for use in subsequent steps.
 
 On Linux, the action installs Podman v5.x and its key dependencies (like CRIU) from the openSUSE Kubic repository, ensuring you get a modern version.
 

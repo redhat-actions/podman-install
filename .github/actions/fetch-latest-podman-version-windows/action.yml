@@ -84,10 +84,10 @@ runs:
           # Fetch latest release with error handling
           if [ -n "$GITHUB_TOKEN" ]; then
             echo "Using GITHUB_TOKEN for authenticated API request."
-            API_RESPONSE=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/podman-container-tools/podman/releases/latest)
+            API_RESPONSE=$(curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/podman-container-tools/podman/releases/latest)
           else
             echo "Warning: GITHUB_TOKEN is not set. API requests may be subject to stricter rate limits."
-            API_RESPONSE=$(curl -s https://api.github.com/repos/podman-container-tools/podman/releases/latest)
+            API_RESPONSE=$(curl -sL https://api.github.com/repos/podman-container-tools/podman/releases/latest)
           fi
           
           # Check for API errors (rate limiting, etc.)
@@ -166,7 +166,7 @@ runs:
         
         # Validate that the download URL actually exists
         echo "Validating download URL..."
-        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -I "$DOWNLOAD_URL")
+        HTTP_CODE=$(curl -sL -o /dev/null -w "%{http_code}" -I "$DOWNLOAD_URL")
         if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
           echo "Error: Download file not found (HTTP $HTTP_CODE)"
           echo "URL: $DOWNLOAD_URL"

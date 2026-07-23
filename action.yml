@@ -59,6 +59,7 @@ runs:
       if: ${{ runner.os == 'Linux' && inputs.ubuntu-repository == 'kubic' }}
       shell: bash
       run: |
+        set -euo pipefail
         ubuntu_version='${{ inputs.ubuntu-version }}'
         echo "INFO: Using Ubuntu version '${ubuntu_version}' for Kubic repository."
 
@@ -87,7 +88,7 @@ runs:
         echo "INFO: Podman installation complete."
         podman version
 
-    - name: Update podman to 5.x on Linux from ${{ github.event.inputs.ubuntu-repository }} repository
+    - name: Update podman to 5.x on Linux from ${{ inputs.ubuntu-repository }} repository
       if: ${{ runner.os == 'Linux' && inputs.ubuntu-repository != 'kubic' }}
       shell: bash
       run: |
@@ -125,7 +126,7 @@ runs:
     - name: Fetch Podman Download URL for Windows
       if: runner.os == 'Windows'
       id: fetch-podman-url
-      uses: redhat-actions/podman-install/.github/actions/fetch-latest-podman-version-windows@50a7dd02e78b3747c2a19f110ac266e7306faec5
+      uses: redhat-actions/podman-install/.github/actions/fetch-latest-podman-version-windows@60b05ab5b050c9f8ec8dff7e0377f8bf36c39207
       with:
         version_input: ${{ inputs.podman-version-input || 'latest' }}
         github_token: ${{ inputs.github-token }}
@@ -170,24 +171,32 @@ runs:
       run: |
         $installScope = "${{ inputs.install-scope }}"
         
-        echo "Adding Podman to PATH for this session..."
+        echo "Adding Podman to PATH..."
         # New MSI installer locations (user-scope and machine-scope)
         $userScopePath = "$env:LOCALAPPDATA\Programs\Podman"
         $machineScopePath = "$env:ProgramFiles\Podman"
         # Legacy installer location (for backward compatibility)
         $legacyPath = "$env:ProgramFiles\RedHat\Podman"
-        
+
+        $podmanDir = $null
         # Check based on install scope first, then fall back to other locations
         if ($installScope -eq "machine" -and (Test-Path $machineScopePath)) {
-          $env:PATH += ";$machineScopePath"
+          $podmanDir = $machineScopePath
         } elseif ($installScope -eq "user" -and (Test-Path $userScopePath)) {
-          $env:PATH += ";$userScopePath"
+          $podmanDir = $userScopePath
         } elseif (Test-Path $userScopePath) {
-          $env:PATH += ";$userScopePath"
+          $podmanDir = $userScopePath
         } elseif (Test-Path $machineScopePath) {
-          $env:PATH += ";$machineScopePath"
+          $podmanDir = $machineScopePath
         } elseif (Test-Path $legacyPath) {
-          $env:PATH += ";$legacyPath"
+          $podmanDir = $legacyPath
+        }
+
+        if ($podmanDir) {
+          # Add to current step's PATH
+          $env:PATH += ";$podmanDir"
+          # Persist for subsequent steps in the consuming workflow
+          echo $podmanDir >> $env:GITHUB_PATH
         }
         
         $podmanPath = (Get-Command podman).Path

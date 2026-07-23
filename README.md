@@ -71,7 +71,7 @@ This action accepts three inputs to customize its behavior:
 
 ## Sub-action: Fetch Podman Version for Windows
 
-The composite sub-action at `.github/actions/fetch-latest-podman-version-windows` resolves a Podman Windows installer without installing it. Use it when your workflow needs the download URL or a locally fetched nightly MSI—for example, to install Podman on a remote Windows host.
+The composite sub-action at `.github/actions/fetch-latest-podman-version-windows` resolves a Podman Windows installer download URL without installing it. Use it when your workflow needs the URL—for example, to download and install Podman on a remote Windows host.
 
 The main `podman-install` action uses this sub-action internally on Windows runners. It currently passes through `latest` or a specific release version only. To consume nightly CI builds, call the sub-action directly (see examples below).
 
@@ -79,18 +79,18 @@ The main `podman-install` action uses this sub-action internally on Windows runn
 
 | `version_input` | Source | Primary output |
 | --- | --- | --- |
-| `latest` | [podman-container-tools/podman](https://github.com/podman-container-tools/podman) GitHub Release | `download_url` |
-| `v5.6.1` / `5.6.1` | Same, pinned tag | `download_url` |
+| `latest` | [podman-container-tools/podman](https://github.com/podman-container-tools/podman) GitHub Release | `download_url` (public MSI/asset URL) |
+| `v5.6.1` / `5.6.1` | Same, pinned tag | `download_url` (public MSI/asset URL) |
 | `https://…` | URL used as-is (validated for CR/LF) | `download_url` |
-| `nightly` / `main` | Latest successful [release-pipeline-validation.yml](https://github.com/podman-container-tools/podman/actions/workflows/release-pipeline-validation.yml) run; artifact `win-msi-<arch>-<nightly_branch>-<sha>` | `local_installer_path` |
+| `nightly` / `main` | Latest successful [release-pipeline-validation.yml](https://github.com/podman-container-tools/podman/actions/workflows/release-pipeline-validation.yml) run; artifact `win-msi-<arch>-main-<sha>` | `download_url` (Actions artifact archive URL) |
 
-`file_type` applies to release downloads only. Nightly resolution always downloads the MSI artifact from CI.
+`file_type` applies to release downloads only. Nightly resolution always targets the MSI CI artifact (`win-msi-<arch>-main-<sha>`).
 
-Release artifacts are fetched from `podman-container-tools/podman`. Nightly MSIs are GitHub Actions artifacts and require an authenticated download via the GitHub CLI (`gh`).
+Release assets are public download URLs. Nightly `download_url` is the GitHub Actions [`archive_download_url`](https://docs.github.com/en/rest/actions/artifacts#get-an-artifact) for the matching artifact (a zip archive containing the MSI). Downloading that URL requires an authenticated request with a token that has `actions: read` on `podman-container-tools/podman`.
 
 ### Requirements for nightly
 
-- `github_token` must be provided (typically `${{ secrets.GITHUB_TOKEN }}`)
+- `github_token` must be provided (typically `${{ secrets.GITHUB_TOKEN }}`, or a PAT with access to the Podman repo artifacts)
 - The workflow job needs `permissions.actions: read`
 - The runner must have `gh` and `jq` available (pre-installed on `ubuntu-latest` and `windows-latest`)
 
@@ -102,17 +102,15 @@ Release artifacts are fetched from `podman-container-tools/podman`. Nightly MSIs
 | `architecture` | no | `amd64` | Windows architecture: `amd64` or `arm64` |
 | `file_type` | no | `msi` | Release asset type: `msi`, `setup.exe`, `installer.exe`, or `remote.zip` |
 | `github_token` | no* | — | GitHub token; *required for nightly |
-| `nightly_branch` | no | `main` | Branch label in nightly artifact names |
 
 ### Outputs
 
 | Output | Description |
 | --- | --- |
 | `version` | Resolved version (e.g. `v5.6.1` or `main-696772b`) |
-| `download_url` | Public release download URL (unset for nightly) |
-| `local_installer_path` | Path to nightly MSI on the runner (unset for release) |
+| `download_url` | Installer download URL (public release asset, or authenticated Actions artifact archive for nightly) |
 | `is_latest` | `true` when `version_input` was `latest` |
-| `is_nightly` | `true` when a CI nightly artifact was downloaded |
+| `is_nightly` | `true` when a CI nightly artifact URL was resolved |
 
 ### Fetch latest stable release
 
@@ -155,12 +153,14 @@ steps:
     with:
       version_input: nightly
       architecture: amd64
-      file_type: msi
       github_token: ${{ secrets.GITHUB_TOKEN }}
 
   - run: |
       echo "version=${{ steps.fetch-podman.outputs.version }}"
-      ls -la "${{ steps.fetch-podman.outputs.local_installer_path }}"
+      curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+        -o podman-nightly.zip \
+        '${{ steps.fetch-podman.outputs.download_url }}'
+      unzip -qo podman-nightly.zip
 ```
 
 Pin the sub-action to a commit SHA instead of `@main` in production workflows.

@@ -15,7 +15,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: 'Fetch Podman Version for Windows'
-description: 'Resolves Podman release download URLs or downloads nightly Windows MSI artifacts from podman-container-tools/podman CI'
+description: 'Resolves Podman Windows installer download URLs for releases or nightly CI artifacts from podman-container-tools/podman'
 
 inputs:
   version_input:
@@ -27,32 +27,25 @@ inputs:
     required: false
     default: 'amd64'
   file_type:
-    description: 'Release asset type: setup.exe, installer.exe, remote.zip, or msi (ignored for nightly; nightly always fetches MSI artifacts)'
+    description: 'Release asset type: setup.exe, installer.exe, remote.zip, or msi (ignored for nightly; nightly always resolves MSI artifacts)'
     required: false
     default: 'msi'
   github_token:
     description: 'GitHub token for authenticated API requests. Required for nightly artifacts; optional but recommended for release lookups to avoid rate limits'
     required: false
-  nightly_branch:
-    description: 'Branch label in nightly artifact names (e.g. "main" selects win-msi-amd64-main-<sha>)'
-    required: false
-    default: 'main'
 
 outputs:
   version:
     description: 'The Podman version (e.g., v5.6.1 or main-451b71f for nightly)'
     value: ${{ steps.fetch.outputs.version }}
   download_url:
-    description: 'Public GitHub Release download URL. Set for latest, specific version, and URL inputs; empty for nightly'
+    description: 'Installer download URL. Public release asset URL for latest/version/URL inputs; authenticated Actions artifact archive URL for nightly'
     value: ${{ steps.fetch.outputs.download_url }}
-  local_installer_path:
-    description: 'Absolute path to a downloaded nightly MSI on the runner. Set only when version_input is nightly or main'
-    value: ${{ steps.fetch.outputs.local_installer_path }}
   is_latest:
     description: 'Whether the latest release version was fetched (true/false)'
     value: ${{ steps.fetch.outputs.is_latest }}
   is_nightly:
-    description: 'Whether a nightly CI artifact was fetched (true/false)'
+    description: 'Whether a nightly CI artifact URL was resolved (true/false)'
     value: ${{ steps.fetch.outputs.is_nightly }}
 
 runs:
@@ -66,7 +59,6 @@ runs:
         ARCHITECTURE: ${{ inputs.architecture }}
         FILE_TYPE: ${{ inputs.file_type }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
-        NIGHTLY_BRANCH: ${{ inputs.nightly_branch }}
         PODMAN_REPO: podman-container-tools/podman
         NIGHTLY_WORKFLOW: release-pipeline-validation.yml
       run: |
@@ -75,7 +67,6 @@ runs:
         echo "Input version: $INPUT_VERSION"
         echo "Architecture: $ARCHITECTURE"
         echo "File type: $FILE_TYPE"
-        echo "Nightly branch: $NIGHTLY_BRANCH"
         if [ -n "$GITHUB_TOKEN" ]; then
           echo "GitHub Token: ***"
         else
@@ -102,7 +93,7 @@ runs:
         }
 
         if [ "$INPUT_VERSION" = "nightly" ] || [ "$INPUT_VERSION" = "main" ]; then
-          echo "Fetching latest successful Podman nightly artifacts from GitHub Actions..."
+          echo "Resolving latest successful Podman nightly artifact URL from GitHub Actions..."
 
           RUN_ID="$(gh_api "repos/${PODMAN_REPO}/actions/workflows/${NIGHTLY_WORKFLOW}/runs?status=success&per_page=20" \
             --jq '.workflow_runs[0].id')"
@@ -114,7 +105,7 @@ runs:
 
           echo "Using workflow run: $RUN_ID"
 
-          ARTIFACT_PREFIX="win-msi-${ARCHITECTURE}-${NIGHTLY_BRANCH}-"
+          ARTIFACT_PREFIX="win-msi-${ARCHITECTURE}-main-"
           ARTIFACT_NAME="$(gh_api "repos/${PODMAN_REPO}/actions/runs/${RUN_ID}/artifacts" \
             --jq ".artifacts[] | select(.name | startswith(\"${ARTIFACT_PREFIX}\")) | .name" | head -n1)"
 
@@ -127,33 +118,22 @@ runs:
           ARTIFACT_ID="$(gh_api "repos/${PODMAN_REPO}/actions/runs/${RUN_ID}/artifacts" \
             --jq ".artifacts[] | select(.name == \"${ARTIFACT_NAME}\") | .id")"
 
-          VERSION_SUFFIX="${ARTIFACT_NAME#${ARTIFACT_PREFIX}}"
-          VERSION="main-${VERSION_SUFFIX}"
+          DOWNLOAD_URL="$(gh_api "repos/${PODMAN_REPO}/actions/artifacts/${ARTIFACT_ID}" \
+            --jq '.archive_download_url')"
 
-          WORKDIR="${RUNNER_TEMP}/podman-nightly-${VERSION_SUFFIX}"
-          mkdir -p "$WORKDIR"
-          ARTIFACT_ZIP="${WORKDIR}/artifact.zip"
-
-          echo "Downloading artifact ${ARTIFACT_NAME} (id=${ARTIFACT_ID})..."
-          gh_api "repos/${PODMAN_REPO}/actions/artifacts/${ARTIFACT_ID}/zip" > "$ARTIFACT_ZIP"
-          unzip -qo "$ARTIFACT_ZIP" -d "$WORKDIR/extracted"
-
-          MSI_PATH="$(find "$WORKDIR/extracted" -type f -name '*.msi' | head -n1)"
-          if [ -z "$MSI_PATH" ]; then
-            echo "Error: No MSI file found inside artifact ${ARTIFACT_NAME}"
-            find "$WORKDIR/extracted" -type f
+          if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then
+            echo "Error: Could not resolve archive_download_url for artifact ${ARTIFACT_NAME} (id=${ARTIFACT_ID})"
             exit 1
           fi
 
-          FINAL_MSI="${WORKDIR}/$(basename "$MSI_PATH")"
-          if [ "$MSI_PATH" != "$FINAL_MSI" ]; then
-            mv "$MSI_PATH" "$FINAL_MSI"
-          fi
+          VERSION_SUFFIX="${ARTIFACT_NAME#${ARTIFACT_PREFIX}}"
+          VERSION="main-${VERSION_SUFFIX}"
 
           echo "Nightly Podman version: $VERSION"
-          echo "Local installer: $FINAL_MSI"
+          echo "Artifact: ${ARTIFACT_NAME} (id=${ARTIFACT_ID})"
+          echo "Download URL: $DOWNLOAD_URL"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "local_installer_path=$FINAL_MSI" >> "$GITHUB_OUTPUT"
+          echo "download_url=$DOWNLOAD_URL" >> "$GITHUB_OUTPUT"
           echo "is_latest=false" >> "$GITHUB_OUTPUT"
           echo "is_nightly=true" >> "$GITHUB_OUTPUT"
           exit 0

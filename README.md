@@ -20,6 +20,8 @@ This action accepts three inputs to customize its behavior:
 
 **ubuntu-repository**: This input is used only on Linux. It offers new option how to install a podman. With the parameter, the particular repositories can be used to install podman and its dependencies. The input is a choice type and it offers to choose from `questing` (default), `resolute`, `noble` or `kubic` repository. If `kubic` is used, then installation will also consider *ubuntu-version* input parameter and use Kubic repositories. Note: If `resolute` is picked up, it will lead to a system upgrade due to incompatible `libc6` library dependency between distros.
 
+**start-service**: (Optional, Linux only) When set to `'true'`, starts the Podman socket service (`systemctl --user start podman.socket`) after installation. Useful for workflows that interact with Podman via the API socket rather than the CLI. Defaults to `'false'`.
+
 **github-token**: (Optional) A GitHub token used to make authenticated API requests when fetching the latest Podman version on Windows. Providing this token helps avoid GitHub API rate limiting, especially in workflows that run frequently. If not provided, the action will make unauthenticated requests which are subject to stricter rate limits. Example: `github-token: ${{ secrets.GITHUB_TOKEN }}`.
 
 ## Usage
@@ -58,6 +60,15 @@ This action accepts three inputs to customize its behavior:
   with:
     ubuntu-version: '23.10'
     ubuntu-repository: 'kubic'
+```
+
+### Install Podman and Start the Socket Service (Linux)
+
+```yaml
+- name: Install Podman with socket service
+  uses: redhat-actions/podman-install@main
+  with:
+    start-service: 'true'
 ```
 
 ### Install Podman 5.4.2 on Ubuntu from Questing distribution repository

@@ -48,6 +48,13 @@ inputs:
     description: "Installation scope for Windows MSI installer. Use 'user' for user-scope (no admin required) or 'machine' for machine-scope (requires admin privileges)."
     required: false
     default: "user"
+  start-service:
+    description: "Start the Podman socket service after installation (Linux only). Runs 'systemctl --user start podman.socket'."
+    required: false
+    options:
+      - false
+      - true
+    default: 'false'
   github-token:
     description: "GitHub token to make authenticated API requests and avoid rate limiting."
     required: false
@@ -74,7 +81,8 @@ runs:
         sudo apt-get install --allow-unauthenticated -qq -y libprotobuf32t64 python3-protobuf libnet1
 
         echo "INFO: Installing CRIU manually..."
-        curl -sLO http://archive.ubuntu.com/ubuntu/pool/universe/c/criu/criu_3.16.1-2_amd64.deb && sudo dpkg -i criu_3.16.1-2_amd64.deb
+        ARCH=$(dpkg --print-architecture)
+        curl -sLO "http://archive.ubuntu.com/ubuntu/pool/universe/c/criu/criu_3.16.1-2_${ARCH}.deb" && sudo dpkg -i "criu_3.16.1-2_${ARCH}.deb"
 
         echo "INFO: Installing Podman..."
         sudo apt-get -qq -y install --allow-unauthenticated podman || {
@@ -122,6 +130,16 @@ runs:
         fi
         echo "Actual ubuntu version: ${AFTER_IDV}"
         echo "Actual podman installed: $(podman -v)"
+
+    - name: Start Podman socket service
+      if: ${{ runner.os == 'Linux' && inputs.start-service == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "INFO: Starting Podman socket service..."
+        systemctl --user start podman.socket
+        echo "INFO: Podman socket service started."
+        systemctl --user status podman.socket --no-pager
 
     - name: Fetch Podman Download URL for Windows
       if: runner.os == 'Windows'

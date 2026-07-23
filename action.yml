@@ -171,24 +171,32 @@ runs:
       run: |
         $installScope = "${{ inputs.install-scope }}"
         
-        echo "Adding Podman to PATH for this session..."
+        echo "Adding Podman to PATH..."
         # New MSI installer locations (user-scope and machine-scope)
         $userScopePath = "$env:LOCALAPPDATA\Programs\Podman"
         $machineScopePath = "$env:ProgramFiles\Podman"
         # Legacy installer location (for backward compatibility)
         $legacyPath = "$env:ProgramFiles\RedHat\Podman"
-        
+
+        $podmanDir = $null
         # Check based on install scope first, then fall back to other locations
         if ($installScope -eq "machine" -and (Test-Path $machineScopePath)) {
-          $env:PATH += ";$machineScopePath"
+          $podmanDir = $machineScopePath
         } elseif ($installScope -eq "user" -and (Test-Path $userScopePath)) {
-          $env:PATH += ";$userScopePath"
+          $podmanDir = $userScopePath
         } elseif (Test-Path $userScopePath) {
-          $env:PATH += ";$userScopePath"
+          $podmanDir = $userScopePath
         } elseif (Test-Path $machineScopePath) {
-          $env:PATH += ";$machineScopePath"
+          $podmanDir = $machineScopePath
         } elseif (Test-Path $legacyPath) {
-          $env:PATH += ";$legacyPath"
+          $podmanDir = $legacyPath
+        }
+
+        if ($podmanDir) {
+          # Add to current step's PATH
+          $env:PATH += ";$podmanDir"
+          # Persist for subsequent steps in the consuming workflow
+          echo $podmanDir >> $env:GITHUB_PATH
         }
         
         $podmanPath = (Get-Command podman).Path

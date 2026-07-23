@@ -59,6 +59,7 @@ runs:
       if: ${{ runner.os == 'Linux' && inputs.ubuntu-repository == 'kubic' }}
       shell: bash
       run: |
+        set -euo pipefail
         ubuntu_version='${{ inputs.ubuntu-version }}'
         echo "INFO: Using Ubuntu version '${ubuntu_version}' for Kubic repository."
 
@@ -87,7 +88,7 @@ runs:
         echo "INFO: Podman installation complete."
         podman version
 
-    - name: Update podman to 5.x on Linux from ${{ github.event.inputs.ubuntu-repository }} repository
+    - name: Update podman to 5.x on Linux from ${{ inputs.ubuntu-repository }} repository
       if: ${{ runner.os == 'Linux' && inputs.ubuntu-repository != 'kubic' }}
       shell: bash
       run: |
@@ -125,7 +126,7 @@ runs:
     - name: Fetch Podman Download URL for Windows
       if: runner.os == 'Windows'
       id: fetch-podman-url
-      uses: redhat-actions/podman-install/.github/actions/fetch-latest-podman-version-windows@50a7dd02e78b3747c2a19f110ac266e7306faec5
+      uses: redhat-actions/podman-install/.github/actions/fetch-latest-podman-version-windows@60b05ab5b050c9f8ec8dff7e0377f8bf36c39207
       with:
         version_input: ${{ inputs.podman-version-input || 'latest' }}
         github_token: ${{ inputs.github-token }}

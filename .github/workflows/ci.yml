@@ -58,6 +58,27 @@ jobs:
           echo "Podman info:"
           podman info --format '{{.Host.OS}} {{.Host.Arch}} {{.Version.Version}}'
 
+  test-linux-arm:
+    name: Test on Linux ARM (ubuntu-24.04-arm)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Podman
+        uses: ./
+        with:
+          ubuntu-repository: questing
+
+      - name: Verify Podman is installed
+        run: |
+          set -euo pipefail
+          echo "Architecture: $(dpkg --print-architecture)"
+          echo "Podman version:"
+          podman --version
+          echo "Podman info:"
+          podman info --format '{{.Host.OS}} {{.Host.Arch}} {{.Version.Version}}'
+
   test-windows:
     name: Test on Windows (windows-latest)
     runs-on: windows-latest

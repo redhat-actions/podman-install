@@ -38,8 +38,8 @@ permissions:
   contents: read
 
 jobs:
-  test-linux:
-    name: Test on Linux (ubuntu-24.04)
+  test-linux-auto:
+    name: Test on Linux (ubuntu-24.04, auto)
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -47,8 +47,24 @@ jobs:
 
       - name: Install Podman
         uses: ./
-        with:
-          ubuntu-repository: questing
+
+      - name: Verify Podman is installed
+        run: |
+          set -euo pipefail
+          echo "Podman version:"
+          podman --version
+          echo "Podman info:"
+          podman info --format '{{.Host.OS}} {{.Host.Arch}} {{.Version.Version}}'
+
+  test-linux-2604:
+    name: Test on Linux (ubuntu-26.04, auto)
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Podman
+        uses: ./
 
       - name: Verify Podman is installed
         run: |
@@ -59,7 +75,7 @@ jobs:
           podman info --format '{{.Host.OS}} {{.Host.Arch}} {{.Version.Version}}'
 
   test-linux-arm:
-    name: Test on Linux ARM (ubuntu-24.04-arm)
+    name: Test on Linux ARM (ubuntu-24.04-arm, auto)
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
@@ -67,8 +83,6 @@ jobs:
 
       - name: Install Podman
         uses: ./
-        with:
-          ubuntu-repository: questing
 
       - name: Verify Podman is installed
         run: |

@@ -1,5 +1,5 @@
 # /**********************************************************************
-#  * Copyright (C) 2025 Red Hat, Inc.
+#  * Copyright (C) 2025-2026 Red Hat, Inc.
 #  *
 #  * Licensed under the Apache License, Version 2.0 (the "License");
 #  * you may not use this file except in compliance with the License.
@@ -27,18 +27,10 @@ inputs:
   ubuntu-repository:
     description: "The Ubuntu distro source to use for podman, ie: questing, resolute, noble. Or use openSUSE's kubic repo"
     required: false
-    options:
-    - questing
-    - kubic
-    - resolute
-    - noble
     default: questing
   allow-upgrade:
     description: "Allow upgrade of the Ubuntu system, defaults to false"
     required: false
-    options:
-      - false
-      - true
     default: 'false'
   podman-version-input:
     description: "Podman version for Windows. Use 'latest' or a specific version (e.g. '5.6.2')."
@@ -51,9 +43,6 @@ inputs:
   start-service:
     description: "Start the Podman socket service after installation (Linux only). Runs 'systemctl --user start podman.socket'."
     required: false
-    options:
-      - false
-      - true
     default: 'false'
   github-token:
     description: "GitHub token to make authenticated API requests and avoid rate limiting."
@@ -144,7 +133,7 @@ runs:
     - name: Fetch Podman Download URL for Windows
       if: runner.os == 'Windows'
       id: fetch-podman-url
-      uses: redhat-actions/podman-install/.github/actions/fetch-latest-podman-version-windows@60b05ab5b050c9f8ec8dff7e0377f8bf36c39207
+      uses: redhat-actions/podman-install/.github/actions/fetch-latest-podman-version-windows@6b9121eed76855854291b52c6bfbc278dbdf0288
       with:
         version_input: ${{ inputs.podman-version-input || 'latest' }}
         github_token: ${{ inputs.github-token }}

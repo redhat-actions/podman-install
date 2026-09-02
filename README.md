@@ -8,15 +8,12 @@ The action is cross-platform, working for both Ubuntu and Windows runners (inclu
 
 On **Windows**, it uses the official Podman MSI installer, automatically fetching the latest version. You can specify a specific Podman version if your CI needs to be pinned. After installation, the action automatically runs `podman machine init --now` to ensure the Podman machine is running and ready for use in subsequent steps.
 
-On **Linux**, the action installs Podman v5.x and its key dependencies (like CRIU) from Ubuntu distribution repositories or the openSUSE Kubic repository, ensuring you get a more modern version than what ships with the GitHub runner images.
+On **Linux**, the action installs Podman v5.x and its key dependencies (like CRIU) from Ubuntu distribution repositories, ensuring you get a more modern version than what ships with the GitHub runner images.
 
 ## Inputs
 
 | Input | Platform | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `ubuntu-repository` | Linux | no | `questing` | Ubuntu distro source: `questing`, `resolute`, `noble`, or `kubic` |
-| `ubuntu-version` | Linux | no | `23.10` | Ubuntu version codename for the Kubic repository (only used when `ubuntu-repository` is `kubic`) |
-| `allow-upgrade` | Linux | no | `false` | Allow upgrade of the Ubuntu system (may be needed for some repository/distro combinations) |
 | `start-service` | Linux | no | `false` | Start the Podman socket service (`systemctl --user start podman.socket`) after installation |
 | `podman-version-input` | Windows | no | `latest` | Podman version: `latest` or a specific version (e.g. `5.6.2`) |
 | `install-scope` | Windows | no | `user` | MSI installation scope: `user` (no admin required) or `machine` (requires admin) |
@@ -57,25 +54,6 @@ On **Linux**, the action installs Podman v5.x and its key dependencies (like CRI
   uses: redhat-actions/podman-install@v1
   with:
     start-service: 'true'
-```
-
-### Install Podman on Ubuntu from Kubic Repository
-
-```yaml
-- name: Install Podman on Ubuntu 24.04 from Kubic
-  uses: redhat-actions/podman-install@v1
-  with:
-    ubuntu-version: '23.10'
-    ubuntu-repository: 'kubic'
-```
-
-### Install Podman from Questing Repository
-
-```yaml
-- name: Install Podman on Ubuntu from Questing repository
-  uses: redhat-actions/podman-install@v1
-  with:
-    ubuntu-repository: 'questing'
 ```
 
 ## Sub-action: Fetch Podman Version for Windows

@@ -36,10 +36,16 @@ inputs:
     description: "GitHub token to make authenticated API requests and avoid rate limiting."
     required: false
 
+outputs:
+  podman-version:
+    description: 'The Podman version'
+    value: ${{ steps.install-podman-linux.outputs.podman-version }}
+
 runs:
   using: "composite"
   steps:
     - name: Install podman on Linux
+      id: install-podman-linux
       if: ${{ runner.os == 'Linux' }}
       shell: bash
       run: |
@@ -49,7 +55,10 @@ runs:
 
         /bin/time -f '%E %C' sudo apt-get update
         /bin/time -f '%E %C' sudo apt install -y podman crun skopeo
-        echo "Actual podman installed: $(podman -v)"
+        
+        PODMAN_VERSION=$(podman -v | awk '{print $3}')
+        echo "Actual podman installed: $PODMAN_VERSION"
+        echo "podman-version=$PODMAN_VERSION" >> "$GITHUB_OUTPUT"
 
     - name: Start Podman socket service
       if: ${{ runner.os == 'Linux' && inputs.start-service == 'true' }}

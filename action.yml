@@ -37,7 +37,7 @@ inputs:
     required: false
 
 outputs:
-  version:
+  podman-version:
     description: 'The Podman version'
     value: ${{ steps.install-podman-linux.outputs.podman-version }}
 

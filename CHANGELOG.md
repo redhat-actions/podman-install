@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-09-02
+
+### Added
+
+- `podman-version` output on Linux reporting the installed Podman version ([#37], [#39])
+
+### Fixed
+
+- Install Podman from runner's native Ubuntu repositories instead of external sources ([#33])
+
+### Changed
+
+- Removed openSUSE Kubic references from documentation ([#38])
+- License changed from Apache-2.0 to MIT to match organization convention
+- CODEOWNERS updated to `@redhat-actions/maintainers`
+
+### CI
+
+- Bumped `fetch-latest-podman-version-windows` sub-action reference ([#35])
+- Updated fetch action version in tests ([#32])
+
 ## [1.0.0] - 2026-07-23
 
 First stable release.
@@ -41,6 +62,7 @@ First stable release.
 - `actions/checkout` upgraded to v7 to resolve node20 deprecation warnings ([#27])
 - Nightly sub-action returns `download_url` instead of downloading artifacts locally; `local_installer_path` output removed ([#26])
 
+[1.1.0]: https://github.com/redhat-actions/podman-install/releases/tag/v1.1.0
 [1.0.0]: https://github.com/redhat-actions/podman-install/releases/tag/v1.0.0
 
 [#5]: https://github.com/redhat-actions/podman-install/pull/5
@@ -56,3 +78,9 @@ First stable release.
 [#26]: https://github.com/redhat-actions/podman-install/pull/26
 [#27]: https://github.com/redhat-actions/podman-install/pull/27
 [#28]: https://github.com/redhat-actions/podman-install/pull/28
+[#32]: https://github.com/redhat-actions/podman-install/pull/32
+[#33]: https://github.com/redhat-actions/podman-install/pull/33
+[#35]: https://github.com/redhat-actions/podman-install/pull/35
+[#37]: https://github.com/redhat-actions/podman-install/pull/37
+[#38]: https://github.com/redhat-actions/podman-install/pull/38
+[#39]: https://github.com/redhat-actions/podman-install/pull/39

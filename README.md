@@ -19,6 +19,12 @@ On **Linux**, the action installs Podman v5.x and its key dependencies (like CRI
 | `install-scope` | Windows | no | `user` | MSI installation scope: `user` (no admin required) or `machine` (requires admin) |
 | `github-token` | Windows | no | -- | GitHub token for authenticated API requests (avoids rate limiting) |
 
+## Outputs
+
+| Output | Description |
+| --- | --- |
+| `podman-version` | Resolved version (e.g. `5.8.4`) 
+
 ## Usage
 
 ### Basic Usage

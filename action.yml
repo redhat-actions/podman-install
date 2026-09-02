@@ -55,7 +55,8 @@ runs:
 
         /bin/time -f '%E %C' sudo apt-get update
         /bin/time -f '%E %C' sudo apt install -y podman crun skopeo
-        PODMAN_VERSION=$(podman -v)
+        
+        PODMAN_VERSION=$(podman -v | awk '{print $3}')
         echo "Actual podman installed: $PODMAN_VERSION"
         echo "podman-version=$PODMAN_VERSION" >> "$GITHUB_OUTPUT"
 

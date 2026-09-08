@@ -100,16 +100,27 @@ runs:
             echo "Installing at machine-scope (requires admin privileges)..."
             $msiArgs += "ALLUSERS=1"
           } else {
+            # Podman's dual-purpose MSI needs MSIINSTALLPERUSER=1 to reliably
+            # install per-user; omitting it does not safely default to
+            # user-scope in silent/non-elevated contexts like CI runners.
+            # See: https://github.com/containers/podman/blob/main/build_windows.md
             echo "Installing at user-scope (no admin required)..."
+            $msiArgs += "MSIINSTALLPERUSER=1"
           }
-          Start-Process msiexec -ArgumentList $msiArgs -Wait
+          $installProcess = Start-Process msiexec -ArgumentList $msiArgs -Wait -PassThru
+          $installExitCode = $installProcess.ExitCode
         } else {
-          Start-Process -FilePath ".\$fileName" -ArgumentList "/install", "/passive", "/norestart", "/log podman-logs.txt" -Wait
+          $installProcess = Start-Process -FilePath ".\$fileName" -ArgumentList "/install", "/passive", "/norestart", "/log podman-logs.txt" -Wait -PassThru
+          $installExitCode = $installProcess.ExitCode
         }
         if ($fileName -match '\.msi$' -and (Test-Path podman-msi.log)) {
           Get-Content podman-msi.log
         } elseif (Test-Path podman-logs.txt) {
           Get-Content podman-logs.txt
+        }
+        if ($installExitCode -ne 0) {
+          Write-Error "Podman installer failed with exit code $installExitCode. See installer log above for details."
+          exit $installExitCode
         }
 
     - name: Initialize Podman Machine on Windows

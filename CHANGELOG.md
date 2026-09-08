@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-09-08
+
+### Fixed
+
+- Windows installer now checks the installer exit code and fails fast with a clear error instead of deferring to a confusing `podman is not recognized` error from the later `Get-Command` lookup ([#40])
+- User-scope Windows MSI install now passes `MSIINSTALLPERUSER=1` explicitly, matching [Podman's documented silent-install invocation](https://github.com/containers/podman/blob/main/build_windows.md) ([#40])
+
 ## [1.1.0] - 2026-09-02
 
 ### Added
@@ -62,6 +69,7 @@ First stable release.
 - `actions/checkout` upgraded to v7 to resolve node20 deprecation warnings ([#27])
 - Nightly sub-action returns `download_url` instead of downloading artifacts locally; `local_installer_path` output removed ([#26])
 
+[1.1.1]: https://github.com/redhat-actions/podman-install/releases/tag/v1.1.1
 [1.1.0]: https://github.com/redhat-actions/podman-install/releases/tag/v1.1.0
 [1.0.0]: https://github.com/redhat-actions/podman-install/releases/tag/v1.0.0
 
@@ -84,3 +92,4 @@ First stable release.
 [#37]: https://github.com/redhat-actions/podman-install/pull/37
 [#38]: https://github.com/redhat-actions/podman-install/pull/38
 [#39]: https://github.com/redhat-actions/podman-install/pull/39
+[#40]: https://github.com/redhat-actions/podman-install/pull/40

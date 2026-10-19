@@ -46,15 +46,34 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Podman
+        id: install-podman
         uses: ./
 
-      - name: Verify Podman is installed
+      - name: Verify Podman 5 is installed
+        env:
+          ACTION_VERSION: ${{ steps.install-podman.outputs.podman-version }}
         run: |
           set -euo pipefail
-          echo "Podman version:"
-          podman --version
-          echo "Podman info:"
+          apt_version=$(dpkg-query -W -f='${Version}' podman)
+          installed_version=$(/usr/bin/podman --version | awk '{print $3}')
+          cli_version=$(podman --version | awk '{print $3}')
+          echo "APT Podman: $apt_version"
+          echo "Installed binary: $installed_version"
+          echo "Selected CLI: $(command -v podman) ($cli_version)"
+          [[ "$apt_version" == 5.* && "$installed_version" == 5.* && "$cli_version" == 5.* ]]
+          [[ "$cli_version" == "$installed_version" && "$cli_version" == "$ACTION_VERSION" ]]
+          selected_binary=$(readlink -f "$(command -v podman)")
+          [[ "$selected_binary" == "$(readlink -f /usr/bin/podman)" ]]
           podman info --format '{{.Host.OS}} {{.Host.Arch}} {{.Version.Version}}'
+
+      - name: Verify Podman can build an image
+        run: |
+          set -euo pipefail
+          build_dir=$(mktemp -d)
+          printf 'FROM scratch AS source\nCOPY marker /marker\nFROM scratch\nCOPY --from=source /marker /marker\n' > "$build_dir/Containerfile"
+          printf 'ok\n' > "$build_dir/marker"
+          podman build --tag podman-install-ci-build "$build_dir"
+          podman image exists podman-install-ci-build
 
   test-linux-2604:
     name: Test on Linux (ubuntu-26.04, auto)
@@ -64,15 +83,27 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Podman
+        id: install-podman
         uses: ./
 
       - name: Verify Podman is installed
+        env:
+          ACTION_VERSION: ${{ steps.install-podman.outputs.podman-version }}
         run: |
           set -euo pipefail
-          echo "Podman version:"
-          podman --version
-          echo "Podman info:"
+          cli_version=$(podman --version | awk '{print $3}')
+          echo "Podman version: $cli_version"
+          [[ "$cli_version" == "$ACTION_VERSION" ]]
           podman info --format '{{.Host.OS}} {{.Host.Arch}} {{.Version.Version}}'
+
+      - name: Verify Podman can build an image
+        run: |
+          set -euo pipefail
+          build_dir=$(mktemp -d)
+          printf 'FROM scratch AS source\nCOPY marker /marker\nFROM scratch\nCOPY --from=source /marker /marker\n' > "$build_dir/Containerfile"
+          printf 'ok\n' > "$build_dir/marker"
+          podman build --tag podman-install-ci-build "$build_dir"
+          podman image exists podman-install-ci-build
 
   test-linux-arm:
     name: Test on Linux ARM (ubuntu-24.04-arm, auto)
@@ -82,16 +113,35 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Podman
+        id: install-podman
         uses: ./
 
-      - name: Verify Podman is installed
+      - name: Verify Podman 5 is installed
+        env:
+          ACTION_VERSION: ${{ steps.install-podman.outputs.podman-version }}
         run: |
           set -euo pipefail
           echo "Architecture: $(dpkg --print-architecture)"
-          echo "Podman version:"
-          podman --version
-          echo "Podman info:"
+          apt_version=$(dpkg-query -W -f='${Version}' podman)
+          installed_version=$(/usr/bin/podman --version | awk '{print $3}')
+          cli_version=$(podman --version | awk '{print $3}')
+          echo "APT Podman: $apt_version"
+          echo "Installed binary: $installed_version"
+          echo "Selected CLI: $(command -v podman) ($cli_version)"
+          [[ "$apt_version" == 5.* && "$installed_version" == 5.* && "$cli_version" == 5.* ]]
+          [[ "$cli_version" == "$installed_version" && "$cli_version" == "$ACTION_VERSION" ]]
+          selected_binary=$(readlink -f "$(command -v podman)")
+          [[ "$selected_binary" == "$(readlink -f /usr/bin/podman)" ]]
           podman info --format '{{.Host.OS}} {{.Host.Arch}} {{.Version.Version}}'
+
+      - name: Verify Podman can build an image
+        run: |
+          set -euo pipefail
+          build_dir=$(mktemp -d)
+          printf 'FROM scratch AS source\nCOPY marker /marker\nFROM scratch\nCOPY --from=source /marker /marker\n' > "$build_dir/Containerfile"
+          printf 'ok\n' > "$build_dir/marker"
+          podman build --tag podman-install-ci-build "$build_dir"
+          podman image exists podman-install-ci-build
 
   test-windows:
     name: Test on Windows (windows-latest)

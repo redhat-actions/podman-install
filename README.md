@@ -8,7 +8,7 @@ The action is cross-platform, working for both Ubuntu and Windows runners (inclu
 
 On **Windows**, it uses the official Podman MSI installer, automatically fetching the latest version. You can specify a specific Podman version if your CI needs to be pinned. After installation, the action automatically runs `podman machine init --now` to ensure the Podman machine is running and ready for use in subsequent steps.
 
-On **Linux**, the action installs Podman v5.x and its key dependencies (like CRIU) from Ubuntu distribution repositories, ensuring you get a more modern version than what ships with the GitHub runner images.
+On **Linux**, Ubuntu 24.04 installs Podman v5.x and its dependencies from Ubuntu's Questing repository, with APT pinning to limit other package upgrades. Ubuntu 26.04 uses its native repository. Questing has reached end of life, so these Ubuntu 24.04 packages no longer receive updates.
 
 ## Inputs
 

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Restore Podman 5 on Ubuntu 24.04 by using pinned Ubuntu Questing packages while keeping Ubuntu 26.04 on its native packages ([#43])
+- Verify the installed package, selected CLI, and image building in Ubuntu 24.04 CI ([#43])
+
 ## [1.1.1] - 2026-09-08
 
 ### Fixed
@@ -93,3 +100,4 @@ First stable release.
 [#38]: https://github.com/redhat-actions/podman-install/pull/38
 [#39]: https://github.com/redhat-actions/podman-install/pull/39
 [#40]: https://github.com/redhat-actions/podman-install/pull/40
+[#43]: https://github.com/redhat-actions/podman-install/issues/43

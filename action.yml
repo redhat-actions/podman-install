@@ -49,14 +49,65 @@ runs:
       if: ${{ runner.os == 'Linux' }}
       shell: bash
       run: |
-        set -eux
-        IDV=$(. /usr/lib/os-release && echo ${ID}-${VERSION_ID})
-        echo "Actual Ubuntu version: ${IDV}"
+        set -euo pipefail
+        . /etc/os-release
+        echo "Runner distribution: ${ID}-${VERSION_ID}"
 
-        /bin/time -f '%E %C' sudo apt-get update
-        /bin/time -f '%E %C' sudo apt install -y podman crun skopeo
-        
-        PODMAN_VERSION=$(podman -v | awk '{print $3}')
+        if [[ "$ID" == "ubuntu" && "$VERSION_ID" == "24.04" ]]; then
+          # Noble ships Podman 4. Use the pre-regression Questing packages on
+          # this runner only; Resolute uses its compatible native packages.
+          case "$(dpkg --print-architecture)" in
+            amd64) ubuntu_archive="https://archive.ubuntu.com/ubuntu" ;;
+            arm64) ubuntu_archive="https://ports.ubuntu.com/ubuntu-ports" ;;
+            *) echo "::error::Unsupported Ubuntu 24.04 architecture"; exit 1 ;;
+          esac
+          if ! curl --fail --silent --location --retry 3 --output /dev/null \
+            "${ubuntu_archive}/dists/questing/InRelease"; then
+            old_releases="https://old-releases.ubuntu.com/ubuntu"
+            if curl --fail --silent --location --retry 3 --output /dev/null \
+              "${old_releases}/dists/questing/InRelease"; then
+              ubuntu_archive="$old_releases"
+            else
+              echo "::error::Questing repository is unavailable on both ${ubuntu_archive} and ${old_releases}"
+              exit 1
+            fi
+          fi
+          echo "deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] ${ubuntu_archive} questing main universe" |
+            sudo tee /etc/apt/sources.list.d/podman-questing.list
+          sudo tee /etc/apt/preferences.d/podman-questing >/dev/null <<'EOF'
+        Package: *
+        Pin: release n=questing
+        Pin-Priority: 50
+
+        Package: podman criu crun skopeo buildah conmon netavark aardvark-dns golang-github-containers-common golang-github-containers-image containers-storage libcompel1
+        Pin: release n=questing
+        Pin-Priority: 500
+        EOF
+
+          /bin/time -f '%E %C' sudo apt-get update
+          /bin/time -f '%E %C' sudo apt-get install -y --allow-downgrades \
+            criu/questing crun/questing podman/questing skopeo/questing
+        else
+          /bin/time -f '%E %C' sudo apt-get update
+          /bin/time -f '%E %C' sudo apt-get install -y podman crun skopeo
+        fi
+
+        if [[ "$ID" == "ubuntu" && "$VERSION_ID" == "24.04" ]]; then
+          package_version=$(/usr/bin/podman --version | awk '{print $3}')
+          if [[ "$package_version" != 5.* ]]; then
+            echo "::error::Expected the Ubuntu package to provide Podman 5; found $package_version"
+            exit 1
+          fi
+          # A runner-provided binary can shadow the installed package.
+          podman_bin_dir="${RUNNER_TEMP:?RUNNER_TEMP must be set}/podman-install-bin"
+          mkdir -p "$podman_bin_dir"
+          ln -sf /usr/bin/podman "$podman_bin_dir/podman"
+          echo "$podman_bin_dir" >> "$GITHUB_PATH"
+          export PATH="$podman_bin_dir:$PATH"
+        fi
+
+        PODMAN_VERSION=$(podman --version | awk '{print $3}')
+        echo "Selected podman CLI: $(command -v podman)"
         echo "Actual podman installed: $PODMAN_VERSION"
         echo "podman-version=$PODMAN_VERSION" >> "$GITHUB_OUTPUT"
 

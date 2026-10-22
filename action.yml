@@ -84,12 +84,12 @@ runs:
         Pin-Priority: 500
         EOF
 
-          /bin/time -f '%E %C' sudo apt-get update
-          /bin/time -f '%E %C' sudo apt-get install -y --allow-downgrades \
+          /bin/time -f '%E %C' apt-get update
+          /bin/time -f '%E %C' apt-get install -y --allow-downgrades \
             criu/questing crun/questing podman/questing skopeo/questing
         else
-          /bin/time -f '%E %C' sudo apt-get update
-          /bin/time -f '%E %C' sudo apt-get install -y podman crun skopeo
+          /bin/time -f '%E %C' apt-get update
+          /bin/time -f '%E %C' apt-get install -y podman crun skopeo
         fi
 
         if [[ "$ID" == "ubuntu" && "$VERSION_ID" == "24.04" ]]; then

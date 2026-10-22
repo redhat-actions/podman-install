@@ -53,6 +53,11 @@ runs:
         . /etc/os-release
         echo "Runner distribution: ${ID}-${VERSION_ID}"
 
+        TIME_CMD=()
+        if [[ -x /bin/time ]]; then
+          TIME_CMD=("/bin/time" "-f" "%E %C")
+        fi
+
         if [[ "$ID" == "ubuntu" && "$VERSION_ID" == "24.04" ]]; then
           # Noble ships Podman 4. Use the pre-regression Questing packages on
           # this runner only; Resolute uses its compatible native packages.
@@ -84,12 +89,12 @@ runs:
         Pin-Priority: 500
         EOF
 
-          /bin/time -f '%E %C' apt-get update
-          /bin/time -f '%E %C' apt-get install -y --allow-downgrades \
+          "${TIME_CMD[@]}" apt-get update
+          "${TIME_CMD[@]}" apt-get install -y --allow-downgrades \
             criu/questing crun/questing podman/questing skopeo/questing
         else
-          /bin/time -f '%E %C' apt-get update
-          /bin/time -f '%E %C' apt-get install -y podman crun skopeo
+          "${TIME_CMD[@]}" apt-get update
+          "${TIME_CMD[@]}" apt-get install -y podman crun skopeo
         fi
 
         if [[ "$ID" == "ubuntu" && "$VERSION_ID" == "24.04" ]]; then

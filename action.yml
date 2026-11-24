@@ -53,6 +53,29 @@ runs:
         . /etc/os-release
         echo "Runner distribution: ${ID}-${VERSION_ID}"
 
+        # GitHub-hosted runners run as an unprivileged user and need sudo;
+        # container and self-hosted runners often already run as root and may
+        # not even have sudo installed.
+        as_root() {
+          if [[ "${EUID}" -eq 0 ]]; then
+            "$@"
+          elif command -v sudo >/dev/null 2>&1; then
+            sudo "$@"
+          else
+            echo "::error::Cannot install packages: not root and sudo is unavailable" >&2
+            return 1
+          fi
+        }
+
+        # Use bash's builtin time so the optional GNU time package (and the
+        # /bin/time path, which does not exist on every distribution) is not
+        # required.
+        TIMEFORMAT='%3Rs'
+        run() {
+          echo "+ $*"
+          time as_root "$@"
+        }
+
         if [[ "$ID" == "ubuntu" && "$VERSION_ID" == "24.04" ]]; then
           # Noble ships Podman 4. Use the pre-regression Questing packages on
           # this runner only; Resolute uses its compatible native packages.
@@ -73,8 +96,8 @@ runs:
             fi
           fi
           echo "deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] ${ubuntu_archive} questing main universe" |
-            sudo tee /etc/apt/sources.list.d/podman-questing.list
-          sudo tee /etc/apt/preferences.d/podman-questing >/dev/null <<'EOF'
+            as_root tee /etc/apt/sources.list.d/podman-questing.list
+          as_root tee /etc/apt/preferences.d/podman-questing >/dev/null <<'EOF'
         Package: *
         Pin: release n=questing
         Pin-Priority: 50
@@ -84,12 +107,12 @@ runs:
         Pin-Priority: 500
         EOF
 
-          /bin/time -f '%E %C' sudo apt-get update
-          /bin/time -f '%E %C' sudo apt-get install -y --allow-downgrades \
+          run apt-get update
+          run apt-get install -y --allow-downgrades \
             criu/questing crun/questing podman/questing skopeo/questing
         else
-          /bin/time -f '%E %C' sudo apt-get update
-          /bin/time -f '%E %C' sudo apt-get install -y podman crun skopeo
+          run apt-get update
+          run apt-get install -y podman crun skopeo
         fi
 
         if [[ "$ID" == "ubuntu" && "$VERSION_ID" == "24.04" ]]; then
@@ -124,10 +147,16 @@ runs:
     - name: Fetch Podman Download URL for Windows
       if: runner.os == 'Windows'
       id: fetch-podman-url
-      uses: redhat-actions/podman-install/.github/actions/fetch-latest-podman-version-windows@5151c6537ad35b8993358d1cdaafa1a448f58944
-      with:
-        version_input: ${{ inputs.podman-version-input || 'latest' }}
-        github_token: ${{ inputs.github-token }}
+      shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.podman-version-input || 'latest' }}
+        ARCHITECTURE: amd64
+        FILE_TYPE: msi
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      # Kept inside this action instead of a nested `uses:` so the action does
+      # not depend on resolving another repository action, which fails on
+      # non-GitHub forges unless the full URL is hard-coded.
+      run: bash "${{ github.action_path }}/.github/actions/fetch-latest-podman-version-windows/fetch.sh"
 
     - name: Install Podman on Windows
       if: runner.os == 'Windows'

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-11-24
+
 ### Changed
 
 - Windows download URL resolution now runs as a script inside the action instead of a nested `uses:` reference, so the composite action no longer depends on resolving another repository action and works on Gitea/Forgejo and other forges ([#46])
@@ -15,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Windows download URL resolution falls back to the other published installer assets (`msi`, `installer.exe`, `setup.exe`) when the requested `file_type` is not available for a release, so pinned versions from before the MSI switch resolve again ([#46])
+
+## [1.1.2] - 2026-10-19
+
+### Fixed
+
 - Restore Podman 5 on Ubuntu 24.04 by using pinned Ubuntu Questing packages while keeping Ubuntu 26.04 on its native packages ([#43])
 - Verify the installed package, selected CLI, and image building in Ubuntu 24.04 CI ([#43])
 
@@ -82,6 +89,8 @@ First stable release.
 - `actions/checkout` upgraded to v7 to resolve node20 deprecation warnings ([#27])
 - Nightly sub-action returns `download_url` instead of downloading artifacts locally; `local_installer_path` output removed ([#26])
 
+[1.1.3]: https://github.com/redhat-actions/podman-install/releases/tag/v1.1.3
+[1.1.2]: https://github.com/redhat-actions/podman-install/releases/tag/v1.1.2
 [1.1.1]: https://github.com/redhat-actions/podman-install/releases/tag/v1.1.1
 [1.1.0]: https://github.com/redhat-actions/podman-install/releases/tag/v1.1.0
 [1.0.0]: https://github.com/redhat-actions/podman-install/releases/tag/v1.0.0

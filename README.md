@@ -160,4 +160,6 @@ steps:
       unzip -qo podman-nightly.zip
 ```
 
-Pin the sub-action to a commit SHA instead of `@v1` in production workflows.
+## Versioning
+
+`@v1` tracks the latest stable 1.x release; the tag is moved automatically when a stable `vX.Y.Z` tag is pushed. Pin a full version tag or a commit SHA in production workflows for reproducible runs.

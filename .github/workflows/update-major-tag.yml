@@ -1,0 +1,88 @@
+# /**********************************************************************
+#  * Copyright (C) 2025-2026 Red Hat, Inc.
+#  *
+#  * Licensed under the Apache License, Version 2.0 (the "License");
+#  * you may not use this file except in compliance with the License.
+#  * You may obtain a copy of the License at
+#  *
+#  * http://www.apache.org/licenses/LICENSE-2.0
+#  *
+#  * Unless required by applicable law or agreed to in writing, software
+#  * distributed under the License is distributed on an "AS IS" BASIS,
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
+#  *
+#  * SPDX-License-Identifier: Apache-2.0
+#  ***********************************************************************/
+
+# Moves the floating major tag (for example v1) to the highest stable release
+# in that major line. Users pin the action to @v1, so the tag has to move when
+# a new vX.Y.Z tag is pushed; nothing else keeps it current.
+#
+# Only the highest release in the major line moves the tag. Backport releases
+# (a v1.1.4 tagged after v1.2.0) and pre-release tags (v1.2.0-rc1) are skipped,
+# so the major tag never goes backwards.
+
+name: Update major version tag
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# Serialise runs so two tags pushed at once cannot race on the same major tag.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  update-major-tag:
+    name: Move floating major tag
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # Grant permission to push the floating tag
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # Tags are needed to find the highest release
+
+      - name: Move major tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Skipping $TAG: not a stable vMAJOR.MINOR.PATCH release tag."
+            exit 0
+          fi
+          major="v${BASH_REMATCH[1]}"
+
+          highest=$(
+            git tag --list "${major}.*" \
+              | grep -E "^${major}\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$" \
+              | sort -V \
+              | tail -n 1 \
+              || true
+          )
+          if [[ -z "$highest" ]]; then
+            echo "Skipping $TAG: no stable ${major} release tags found."
+            exit 0
+          fi
+          if [[ "$highest" != "$TAG" ]]; then
+            echo "Skipping $TAG: ${highest} is the highest stable ${major} release."
+            exit 0
+          fi
+
+          commit=$(git rev-parse "${TAG}^{commit}")
+          current=$(git rev-parse -q --verify "refs/tags/${major}" || true)
+          if [[ "$current" == "$commit" ]]; then
+            echo "${major} already points at ${TAG} (${commit})."
+            exit 0
+          fi
+
+          echo "Moving ${major} to ${TAG} (${commit})."
+          git tag -f "$major" "$commit"
+          git push origin "refs/tags/${major}" --force

@@ -16,9 +16,10 @@
 #  * SPDX-License-Identifier: Apache-2.0
 #  ***********************************************************************/
 
-# Validates that the podman-install action works on both Linux and Windows
-# runners. Runs on every PR and on pushes to main so regressions are caught
-# before a release tag is created.
+# Validates that the podman-install action works on Linux (including a root
+# container with no sudo) and Windows runners, and that the Windows download
+# URL sub-action resolves release URLs. Runs on every PR and on pushes to main
+# so regressions are caught before a release tag is created.
 
 name: CI
 
@@ -161,3 +162,130 @@ jobs:
         run: |
           podman --version
           podman machine list
+
+  test-linux-2204:
+    name: Test on Linux (ubuntu-22.04, auto)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Podman
+        id: install-podman
+        uses: ./
+
+      - name: Verify Podman is installed
+        env:
+          ACTION_VERSION: ${{ steps.install-podman.outputs.podman-version }}
+        run: |
+          set -euo pipefail
+          echo "bash: $BASH_VERSION"
+          cli_version=$(podman --version | awk '{print $3}')
+          echo "Podman version: $cli_version"
+          [[ "$cli_version" == "$ACTION_VERSION" ]]
+          podman info --format '{{.Host.OS}} {{.Host.Arch}} {{.Version.Version}}'
+
+  # Runs the action as root with no sudo available, as in a container or a
+  # self-hosted runner. The 24.04 package path is exercised, which is where
+  # privilege escalation used to be unconditional.
+  test-linux-root-container:
+    name: Test on Linux (container, root without sudo)
+    runs-on: ubuntu-24.04
+    container: ubuntu:24.04
+    steps:
+      - name: Install prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y git curl ca-certificates
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Confirm root and no sudo
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -eq 0
+          ! command -v sudo
+
+      - name: Install Podman
+        id: install-podman
+        uses: ./
+
+      - name: Verify Podman 5 is installed
+        shell: bash
+        env:
+          ACTION_VERSION: ${{ steps.install-podman.outputs.podman-version }}
+        run: |
+          set -euo pipefail
+          apt_version=$(dpkg-query -W -f='${Version}' podman)
+          cli_version=$(podman --version | awk '{print $3}')
+          echo "APT Podman: $apt_version"
+          echo "Selected CLI: $cli_version"
+          [[ "$apt_version" == 5.* ]]
+          [[ "$cli_version" == "$ACTION_VERSION" ]]
+
+  # The Windows URL resolution is a documented standalone action. The main
+  # action calls fetch.sh directly, so this is the only coverage the sub-action
+  # wrapper gets.
+  test-windows-subaction:
+    name: Test Windows sub-action (URL resolution)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Resolve latest release
+        id: latest
+        uses: ./.github/actions/fetch-latest-podman-version-windows
+        with:
+          version_input: latest
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve pinned release
+        id: pinned
+        uses: ./.github/actions/fetch-latest-podman-version-windows
+        with:
+          version_input: '5.8.10'
+
+      - name: Resolve full URL
+        id: url
+        uses: ./.github/actions/fetch-latest-podman-version-windows
+        with:
+          version_input: 'https://example.com/releases/v5.6.2/podman.msi'
+
+      - name: Resolve pinned release without an MSI
+        id: fallback
+        uses: ./.github/actions/fetch-latest-podman-version-windows
+        with:
+          version_input: '5.6.2'
+
+      - name: Verify outputs
+        env:
+          LATEST_VERSION: ${{ steps.latest.outputs.version }}
+          LATEST_URL: ${{ steps.latest.outputs.download_url }}
+          LATEST_IS_LATEST: ${{ steps.latest.outputs.is_latest }}
+          PINNED_VERSION: ${{ steps.pinned.outputs.version }}
+          PINNED_URL: ${{ steps.pinned.outputs.download_url }}
+          URL_URL: ${{ steps.url.outputs.download_url }}
+          URL_VERSION: ${{ steps.url.outputs.version }}
+          FALLBACK_VERSION: ${{ steps.fallback.outputs.version }}
+          FALLBACK_URL: ${{ steps.fallback.outputs.download_url }}
+        run: |
+          set -euo pipefail
+          echo "latest:   $LATEST_VERSION $LATEST_URL"
+          echo "pinned:   $PINNED_VERSION $PINNED_URL"
+          echo "url:      $URL_VERSION $URL_URL"
+          echo "fallback: $FALLBACK_VERSION $FALLBACK_URL"
+          [[ "$LATEST_IS_LATEST" == "true" ]]
+          [[ "$LATEST_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]
+          [[ "$LATEST_URL" == *"/releases/download/$LATEST_VERSION/"* ]]
+          [[ "$PINNED_VERSION" == "v5.8.10" ]]
+          [[ "$PINNED_URL" == *"podman-installer-windows-amd64.msi" ]]
+          [[ "$URL_URL" == "https://example.com/releases/v5.6.2/podman.msi" ]]
+          [[ "$URL_VERSION" == "v5.6.2" ]]
+          # 5.6.2 has no MSI, so the default msi request must fall back to an exe
+          [[ "$FALLBACK_VERSION" == "v5.6.2" ]]
+          [[ "$FALLBACK_URL" == *"podman-installer-windows-amd64.exe" ]]

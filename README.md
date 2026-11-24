@@ -10,6 +10,8 @@ On **Windows**, it uses the official Podman MSI installer, automatically fetchin
 
 On **Linux**, Ubuntu 24.04 installs Podman v5.x and its dependencies from Ubuntu's Questing repository, with APT pinning to limit other package upgrades. Ubuntu 26.04 uses its native repository. Questing has reached end of life, so these Ubuntu 24.04 packages no longer receive updates.
 
+The action is self-contained: it does not reference any other repository action, and only escalates privileges when it is not already running as root. That makes it usable on Gitea/Forgejo and other forges, and on self-hosted Linux runners, in addition to GitHub-hosted runners.
+
 ## Inputs
 
 | Input | Platform | Required | Default | Description |
@@ -66,7 +68,7 @@ On **Linux**, Ubuntu 24.04 installs Podman v5.x and its dependencies from Ubuntu
 
 The composite sub-action at `.github/actions/fetch-latest-podman-version-windows` resolves a Podman Windows installer download URL without installing it. Use it when your workflow needs the URL -- for example, to download and install Podman on a remote Windows host.
 
-The main `podman-install` action uses this sub-action internally on Windows runners. It currently passes through `latest` or a specific release version only. To consume nightly CI builds, call the sub-action directly (see examples below).
+The main `podman-install` action runs the same `fetch.sh` script internally on Windows runners rather than referencing this sub-action with `uses:`. It currently passes through `latest` or a specific release version only. To consume nightly CI builds, call the sub-action directly (see examples below).
 
 ### Version resolution
 
@@ -78,6 +80,8 @@ The main `podman-install` action uses this sub-action internally on Windows runn
 | `nightly` / `main` | Latest successful [release-pipeline-validation.yml](https://github.com/podman-container-tools/podman/actions/workflows/release-pipeline-validation.yml) run; artifact `win-msi-<arch>-main-<sha>` | `download_url` (Actions artifact archive URL) |
 
 `file_type` applies to release downloads only. Nightly resolution always targets the MSI CI artifact (`win-msi-<arch>-main-<sha>`).
+
+The published Windows assets vary by release: 4.x and early 5.x only ship `podman-<version>-setup.exe`, 5.6.x also publishes an `.exe` installer, and current releases only publish the `.msi`. If the requested `file_type` is not available for a version, the sub-action falls back to the other installer assets, so pinned versions resolve whenever the release has any Windows installer. `remote.zip` has no equivalent and is not retried.
 
 Release assets are public download URLs. Nightly `download_url` is the GitHub Actions [`archive_download_url`](https://docs.github.com/en/rest/actions/artifacts#get-an-artifact) for the matching artifact (a zip archive containing the MSI). Downloading that URL requires an authenticated request with a token that has `actions: read` on `podman-container-tools/podman`.
 
@@ -93,7 +97,7 @@ Release assets are public download URLs. Nightly `download_url` is the GitHub Ac
 | --- | --- | --- | --- |
 | `version_input` | yes | `latest` | Version selector (see table above) |
 | `architecture` | no | `amd64` | Windows architecture: `amd64` or `arm64` |
-| `file_type` | no | `msi` | Release asset type: `msi`, `setup.exe`, `installer.exe`, or `remote.zip` |
+| `file_type` | no | `msi` | Preferred release asset type: `msi`, `setup.exe`, `installer.exe`, or `remote.zip`; falls back to another installer when this type is not published for the release |
 | `github_token` | no* | -- | GitHub token; *required for nightly |
 
 ### Outputs

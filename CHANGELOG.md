@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Windows download URL resolution now runs as a script inside the action instead of a nested `uses:` reference, so the composite action no longer depends on resolving another repository action and works on Gitea/Forgejo and other forges ([#46])
+- Linux package installation only uses `sudo` when not already running as root, and no longer requires the GNU `time` package ([#46])
+
 ### Fixed
 
+- Windows download URL resolution falls back to the other published installer assets (`msi`, `installer.exe`, `setup.exe`) when the requested `file_type` is not available for a release, so pinned versions from before the MSI switch resolve again ([#46])
 - Restore Podman 5 on Ubuntu 24.04 by using pinned Ubuntu Questing packages while keeping Ubuntu 26.04 on its native packages ([#43])
 - Verify the installed package, selected CLI, and image building in Ubuntu 24.04 CI ([#43])
 
@@ -101,3 +107,4 @@ First stable release.
 [#39]: https://github.com/redhat-actions/podman-install/pull/39
 [#40]: https://github.com/redhat-actions/podman-install/pull/40
 [#43]: https://github.com/redhat-actions/podman-install/issues/43
+[#46]: https://github.com/redhat-actions/podman-install/pull/46
